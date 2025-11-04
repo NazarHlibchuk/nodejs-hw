@@ -1,43 +1,49 @@
-// src/server.js
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import pino from 'pino-http';
-import 'dotenv/config';
+import pinoHttp from 'pino-http';
 
 const app = express();
 
-// Використовуємо значення з .env або дефолтний порт 3000
-const PORT = process.env.PORT ?? 3000;
-
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
-
-// Middleware
-app.use(express.json());
-app.use(cors());
+// Логер HTTP-запитів
 app.use(
-  pino({
-    level: 'info',
-    transport: {
-      target: 'pino-pretty',
-      options: {
-        colorize: true,
-        translateTime: 'HH:MM:ss',
-        ignore: 'pid,hostname',
-        messageFormat: '{req.method} {req.url} {res.statusCode} - {responseTime}ms',
-        hideObject: true,
-      },
-    },
+  pinoHttp({
+    // prettyPrint у проді не треба; дивись логи у Render → Logs
   }),
 );
 
-// Перший маршрут
-app.get('/', (req, res) => {
-  res.status(200).json({ message: 'Hello world!' });
+// Базові middleware
+app.use(cors());
+app.use(express.json());
+
+// Роути
+app.get('/notes', (req, res) => {
+  res.status(200).json({ message: 'Retrieved all notes' });
 });
 
-// Запуск сервера
+app.get('/notes/:noteId', (req, res) => {
+  const { noteId } = req.params;
+  res.status(200).json({ message: `Retrieved note with ID: ${noteId}` });
+});
+
+// Спеціальний тестовий маршрут для імітації помилки
+app.get('/test-error', () => {
+  throw new Error('Simulated server error');
+});
+
+// 404 — якщо маршрут не знайдений
+app.use((req, res) => {
+  res.status(404).json({ message: 'Route not found' });
+});
+
+// 500 — глобальний обробник помилок (останній middleware)
+app.use((err, req, res, next) => {
+  if (req.log) req.log.error({ err }, 'Unhandled error');
+  const status = err.status || 500;
+  res.status(status).json({ message: err.message || 'Internal Server Error' });
+});
+
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
