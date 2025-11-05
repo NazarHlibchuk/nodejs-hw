@@ -1,49 +1,45 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import pinoHttp from 'pino-http';
+
+import { connectMongoDB } from './db/connectMongoDB.js';
+import notesRoutes from './routes/notesRoutes.js';
+import { logger } from './middleware/logger.js';
+import { notFoundHandler } from './middleware/notFoundHandler.js';
+import { errorHandler } from './middleware/errorHandler.js';
 
 const app = express();
 
-// Логер HTTP-запитів
-app.use(
-  pinoHttp({
-    // prettyPrint у проді не треба; дивись логи у Render → Logs
-  }),
-);
-
-// Базові middleware
-app.use(cors());
+// middleware
+app.use(logger);
 app.use(express.json());
+app.use(cors());
 
-// Роути
-app.get('/notes', (req, res) => {
-  res.status(200).json({ message: 'Retrieved all notes' });
-});
+// routes
+app.use(notesRoutes);
 
-app.get('/notes/:noteId', (req, res) => {
-  const { noteId } = req.params;
-  res.status(200).json({ message: `Retrieved note with ID: ${noteId}` });
-});
+// 404
+app.use(notFoundHandler);
 
-// Спеціальний тестовий маршрут для імітації помилки
-app.get('/test-error', () => {
-  throw new Error('Simulated server error');
-});
+// 500 last
+app.use(errorHandler);
 
-// 404 — якщо маршрут не знайдений
-app.use((req, res) => {
-  res.status(404).json({ message: 'Route not found' });
-});
+const { PORT = 3000, MONGO_URL } = process.env;
 
-// 500 — глобальний обробник помилок (останній middleware)
-app.use((err, req, res, next) => {
-  if (req.log) req.log.error({ err }, 'Unhandled error');
-  const status = err.status || 500;
-  res.status(status).json({ message: err.message || 'Internal Server Error' });
-});
+async function start() {
+  if (!MONGO_URL) {
+    console.error(' Missing MONGO_URL env variable');
+    process.exit(1);
+  }
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  await connectMongoDB(MONGO_URL);
+
+  app.listen(PORT, () => {
+    console.log(` Server listening on port ${PORT}`);
+  });
+}
+
+start().catch((err) => {
+  console.error(' Failed to start server', err);
+  process.exit(1);
 });
