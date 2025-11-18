@@ -1,10 +1,13 @@
+// src/server.js
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import { errors as celebrateErrors } from 'celebrate';
 
 import { connectMongoDB } from './db/connectMongoDB.js';
 import notesRoutes from './routes/notesRoutes.js';
+import authRoutes from './routes/authRoutes.js';
 import { logger } from './middleware/logger.js';
 import { notFoundHandler } from './middleware/notFoundHandler.js';
 import { errorHandler } from './middleware/errorHandler.js';
@@ -12,18 +15,23 @@ import { errorHandler } from './middleware/errorHandler.js';
 const app = express();
 
 app.use(logger);
+app.use(cookieParser());
 app.use(express.json());
 app.use(cors());
 
+// Auth
+app.use(authRoutes);
+
+// Notes
 app.use(notesRoutes);
 
-// 404 для всього, що не збіглося
+// 404
 app.use(notFoundHandler);
 
-// помилки від celebrate (валідація)
+// помилки celebrate
 app.use(celebrateErrors());
 
-// глобальний обробник (http-errors/інші)
+// глобальний error handler
 app.use(errorHandler);
 
 const { PORT = 3000, MONGO_URL } = process.env;
