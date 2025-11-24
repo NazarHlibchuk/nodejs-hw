@@ -12,6 +12,8 @@ import { logger } from './middleware/logger.js';
 import { notFoundHandler } from './middleware/notFoundHandler.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
+import userRoutes from './routes/userRoutes.js';
+
 const app = express();
 
 app.use(logger);
@@ -21,6 +23,9 @@ app.use(cors());
 
 // Auth
 app.use(authRoutes);
+
+// User
+app.use(userRoutes);
 
 // Notes
 app.use(notesRoutes);
