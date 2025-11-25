@@ -19,11 +19,17 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-export async function sendEmail({ to, subject, html }) {
-  await transporter.sendMail({
+/**
+ * Загальна утиліта відправки листів.
+ * Приймає об'єкт options, який напряму передається в transporter.sendMail.
+ * Якщо from не вказано, підставляємо SMTP_FROM за замовчуванням.
+ */
+export async function sendEmail(options) {
+  const finalOptions = {
     from: SMTP_FROM,
-    to,
-    subject,
-    html,
-  });
+    ...options,
+  };
+
+  
+  return transporter.sendMail(finalOptions);
 }
